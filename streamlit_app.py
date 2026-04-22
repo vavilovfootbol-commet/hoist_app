@@ -190,6 +190,13 @@ if mech_result is not None:
 
 st.header("5–7. Проверка выбранного двигателя и редуктора")
 
+if "drive_result" not in st.session_state:
+    st.session_state["drive_result"] = None
+if "motor" not in st.session_state:
+    st.session_state["motor"] = None
+if "reducer" not in st.session_state:
+    st.session_state["reducer"] = None
+
 if mech_result is None:
     st.warning("Сначала выполните расчёт механизма (форма выше).")
 else:
@@ -258,82 +265,93 @@ else:
 
         drive_result = check_drive(mech_result, motor, reducer)
 
-        # ---------- Блок "5. Проверка выбранного двигателя" ----------
-        st.subheader("5. Проверка выбранного двигателя")
+        # сохраняем в session_state, чтобы использовать ниже
+        st.session_state["drive_result"] = drive_result
+        st.session_state["motor"] = motor
+        st.session_state["reducer"] = reducer
 
-        mm = drive_result["motor_moments"]
-        ref = mech_result["ref"]
-        motor_ok = drive_result["motor_ok"]
+# ------ вывод результатов проверки (5–7), если они есть ------
+drive_result = st.session_state.get("drive_result", None)
 
-        st.markdown(
-            f"**Двигатель:** {motor['type']}  \n"
-            f"Nдв = {motor['N_kW']:.2f} кВт, nдв = {motor['n_rpm']:.0f} об/мин  \n"
-            f"φ_max = {motor['phi_max']:.2f}, φ_min = {motor['phi_min']:.2f}  \n"
-            f"Mном ≈ {mm['M_nom_kgfm']:.2f} кгс·м  \n"
-            f"Mmax ≈ {mm['M_max_kgfm']:.2f} кгс·м  \n"
-            f"Mmin ≈ {mm['M_min_kgfm']:.2f} кгс·м  \n"
-            f"Mср ≈ {mm['M_avg_kgfm']:.2f} кгс·м  \n"
-            f"Nдв,расч ≈ {ref['N_motor_req_kW']:.2f} кВт  \n"
-            f"Запас по мощности ≈ {100*(motor['N_kW']/ref['N_motor_req_kW']-1):.1f} %"
+if drive_result is not None and mech_result is not None:
+    motor = st.session_state["motor"]
+    reducer = st.session_state["reducer"]
+    ref = mech_result["ref"]
+
+    # ---------- Блок "5. Проверка выбранного двигателя" ----------
+    st.subheader("5. Проверка выбранного двигателя")
+
+    mm = drive_result["motor_moments"]
+    motor_ok = drive_result["motor_ok"]
+
+    st.markdown(
+        f"**Двигатель:** {motor['type']}  \n"
+        f"Nдв = {motor['N_kW']:.2f} кВт, nдв = {motor['n_rpm']:.0f} об/мин  \n"
+        f"φ_max = {motor['phi_max']:.2f}, φ_min = {motor['phi_min']:.2f}  \n"
+        f"Mном ≈ {mm['M_nom_kgfm']:.2f} кгс·м  \n"
+        f"Mmax ≈ {mm['M_max_kgfm']:.2f} кгс·м  \n"
+        f"Mmin ≈ {mm['M_min_kgfm']:.2f} кгс·м  \n"
+        f"Mср ≈ {mm['M_avg_kgfm']:.2f} кгс·м  \n"
+        f"Nдв,расч ≈ {ref['N_motor_req_kW']:.2f} кВт  \n"
+        f"Запас по мощности ≈ {100*(motor['N_KW']/ref['N_motor_req_kW']-1):.1f} %"
+    )
+    # не забудь здесь исправить N_KW -> N_kW:
+    # f"Запас по мощности ≈ {100*(motor['N_kW']/ref['N_motor_req_kW']-1):.1f} %"
+
+    if motor_ok:
+        st.success("Вывод по мощности двигателя: ПОДХОДИТ")
+    else:
+        st.error("Вывод по мощности двигателя: НЕ ПОДХОДИТ")
+
+    # ---------- Блок "6. Проверка редуктора" ----------
+    st.subheader("6. Проверка выбранного редуктора")
+
+    red_m = drive_result["reducer_moments"]
+    red_ok = drive_result["reducer_ok"]
+
+    st.markdown(
+        f"**Редуктор:** {reducer['type']}  \n"
+        f"u_cat = {reducer['u_cat']:.2f}  \n"
+        f"Nред (допустимая) = {reducer['N_red_kW']:.2f} кВт  \n"
+        f"Mдоп редуктора ≈ {red_m['M_red_nom_kgfm']:.2f} кгс·м  \n"
+        f"Mср двигателя ≈ {mm['M_avg_kgfm']:.2f} кгс·м"
+    )
+
+    if red_ok:
+        st.success("Проверка по моменту: ПОДХОДИТ (Mср < Mдоп)")
+    else:
+        st.error("Проверка по моменту: НЕ ПОДХОДИТ (Mср ≥ Mдоп)")
+
+    # ---------- Блок "7. Согласование по передаточному числу" ----------
+    st.subheader("7. Согласование по передаточному числу")
+
+    u_required = drive_result["u_required"]
+    u_ok = drive_result["u_ok"]
+    u_rel_dev = drive_result["u_rel_dev"] * 100.0
+    n_b_rpm = drive_result["n_b_rpm"]
+
+    st.markdown(
+        f"**nб:** ≈ {n_b_rpm:.2f} об/мин  \n"
+        f"u_треб ≈ {u_required:.2f}  \n"
+        f"u_cat = {reducer['u_cat']:.2f}  \n"
+        f"Относительное отклонение ≈ {u_rel_dev:.2f} %"
+    )
+
+    if u_ok:
+        st.success("Согласование по u (допуск ~2%): ПОДХОДИТ")
+    else:
+        st.error("Согласование по u (допуск ~2%): НЕ ПОДХОДИТ")
+
+    # ---------- Блок "8. Эскиз барабана (PDF)" ----------
+    st.subheader("8. Эскиз барабана (PDF)")
+
+    company_name = st.text_input("Название фирмы для штампа", value='ООО "Моя фирма"')
+
+    if st.button("Сформировать эскиз А3 (PDF)"):
+        pdf_bytes = generate_drum_pdf(mech_result, drive_result, company_name=company_name)
+        st.download_button(
+            label="Скачать эскиз барабана (A3, PDF)",
+            data=pdf_bytes,
+            file_name="eskiz_barbana_A3.pdf",
+            mime="application/pdf",
         )
-
-        # Исправление ключа 'N_KW' -> 'N_kW' (если нужно):
-        # f"Запас по мощности ≈ {100*(motor['N_kW']/ref['N_motor_req_kW']-1):.1f} %"
-
-        if motor_ok:
-            st.success("Вывод по мощности двигателя: ПОДХОДИТ")
-        else:
-            st.error("Вывод по мощности двигателя: НЕ ПОДХОДИТ")
-
-        # ---------- Блок "6. Проверка выбранного редуктора" ----------
-        st.subheader("6. Проверка выбранного редуктора")
-
-        red_m = drive_result["reducer_moments"]
-        red_ok = drive_result["reducer_ok"]
-
-        st.markdown(
-            f"**Редуктор:** {reducer['type']}  \n"
-            f"u_cat = {reducer['u_cat']:.2f}  \n"
-            f"Nред (допустимая) = {reducer['N_red_kW']:.2f} кВт  \n"
-            f"Mдоп редуктора ≈ {red_m['M_red_nom_kgfm']:.2f} кгс·м  \n"
-            f"Mср двигателя ≈ {mm['M_avg_kgfm']:.2f} кгс·м"
-        )
-
-        if red_ok:
-            st.success("Проверка по моменту: ПОДХОДИТ (Mср < Mдоп)")
-        else:
-            st.error("Проверка по моменту: НЕ ПОДХОДИТ (Mср ≥ Mдоп)")
-
-        # ---------- Блок "7. Согласование по передаточному числу" ----------
-        st.subheader("7. Согласование по передаточному числу")
-
-        u_required = drive_result["u_required"]
-        u_ok = drive_result["u_ok"]
-        u_rel_dev = drive_result["u_rel_dev"] * 100.0
-        n_b_rpm = drive_result["n_b_rpm"]
-
-        st.markdown(
-            f"**nб:** ≈ {n_b_rpm:.2f} об/мин  \n"
-            f"u_треб ≈ {u_required:.2f}  \n"
-            f"u_cat = {reducer['u_cat']:.2f}  \n"
-            f"Относительное отклонение ≈ {u_rel_dev:.2f} %"
-        )
-
-        if u_ok:
-            st.success("Согласование по u (допуск ~2%): ПОДХОДИТ")
-        else:
-            st.error("Согласование по u (допуск ~2%): НЕ ПОДХОДИТ")
-
-        # ---------- Блок "8. Эскиз барабана (PDF)" ----------
-        st.subheader("8. Эскиз барабана (PDF)")
-
-        company_name = st.text_input("Название фирмы для штампа", value='ООО "Моя фирма"')
-
-        if st.button("Сформировать эскиз А3 (PDF)"):
-            pdf_bytes = generate_drum_pdf(mech_result, drive_result, company_name=company_name)
-            st.download_button(
-                label="Скачать эскиз барабана (A3, PDF)",
-                data=pdf_bytes,
-                file_name="eskiz_barbana_A3.pdf",
-                mime="application/pdf",
-            )
