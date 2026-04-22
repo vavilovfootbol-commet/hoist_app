@@ -293,7 +293,7 @@ if drive_result is not None and mech_result is not None:
         f"Mmin ≈ {mm['M_min_kgfm']:.2f} кгс·м  \n"
         f"Mср ≈ {mm['M_avg_kgfm']:.2f} кгс·м  \n"
         f"Nдв,расч ≈ {ref['N_motor_req_kW']:.2f} кВт  \n"
-        f"Запас по мощности ≈ {100*(motor['N_KW']/ref['N_motor_req_kW']-1):.1f} %"
+        f"Запас по мощности ≈ {100*(motor['N_kW']/ref['N_motor_req_kW']-1):.1f} %"
     )
     # не забудь здесь исправить N_KW -> N_kW:
     # f"Запас по мощности ≈ {100*(motor['N_kW']/ref['N_motor_req_kW']-1):.1f} %"
