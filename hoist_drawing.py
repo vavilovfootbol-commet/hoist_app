@@ -179,7 +179,7 @@ def generate_drum_pdf(mech_result, drive_result, company_name="ООО \"Фирм
     table_y = height / 2 - 40 * mm
     line_height = 12
 
-    c.setFont("Helvetica", 9)
+    c.setFont("Helvetica", 15)
     c.drawString(table_x, table_y + 14 * line_height, "Исходные данные:")
     c.drawString(table_x, table_y + 13 * line_height,
                  f"Q = {basic['Q_t']:.2f} тс, H = {basic['H_m']:.2f} м, v = {basic['v_lift_m_s']:.3f} м/с")
