@@ -155,19 +155,26 @@ def calc_drum_geometry(H_m, d_rope_mm, regime):
     t_mm = select_rope_pitch(d_rope_mm)
     l_t_mm = z_half * t_mm
     a_anc_mm = 20.0
-    c_gap_mm = 180.0
-    L_b_mm = 2.0 * (l_t_mm + 4.0 * a_anc_mm) + c_gap_mm
+    L_k_mm = 4.0 * a_anc_mm
+    L_g_mm = 180.0
+    L_h_mm = L_t_mm
+    L_b_mm = 2.0 * (l_h_mm + L_k_mm) + L_g_mm
+    D_center_mm = D_std_mm
+    D_min_mm = D_center_mm - d_rope_mm
     return {
         "D_req_mm": D_req_mm,
-        "D_center_mm": D_std_mm,
+        "D_center_mm": D_center_mm,
+        "D_min_mm": D_min_mm,
         "L_m": L_m,
         "z_turns_half_raw": z_half_raw,
         "z_turns_half": z_half,
         "t_step_mm": t_mm,
         "l_t_mm": l_t_mm,
-        "a_anc_mm": a_anc_mm,
-        "c_gap_mm": c_gap_mm,
+        "L_h_mm": L_h_mm,
+        "L_k_mm": L_k_mm,
+        "L_g_mm": L_g_mm,
         "L_b_mm": L_b_mm,
+        "a_anc_mm": a_anc_mm,
         "h1": h1,
     }
 
